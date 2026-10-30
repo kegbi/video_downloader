@@ -1,0 +1,61 @@
+# syntax=docker/dockerfile:1.9
+
+# Keep the build and runtime roots identical so the dynamically linked output uses one reviewed
+# musl/OpenSSL ABI. The digest pins the official multi-platform Alpine 3.22.1 image index.
+FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 AS builder
+
+RUN apk add --no-cache \
+      build-base=0.5-r3 \
+      ca-certificates=20261020-r0 \
+      cmake=3.31.7-r1 \
+      git=2.49.1-r0 \
+      gperf=3.3-r0 \
+      linux-headers=6.14.2-r0 \
+      openssl-dev=3.5.9-r0 \
+      zlib-dev=1.3.2-r1
+
+WORKDIR /src/telegram-bot-api
+
+# Telegram does not publish Bot API server releases. Pin the reviewed official Bot API 10.2
+# commit; its gitlink pins the recursively fetched TDLib source as well.
+RUN git init . \
+    && git remote add origin https://github.com/tdlib/telegram-bot-api.git \
+    && git fetch --depth=1 origin adfd7f6a8e990272851777eeb3ae0def4216f161 \
+    && git checkout --detach FETCH_HEAD \
+    && test "$(git rev-parse HEAD)" = "adfd7f6a8e990272851777eeb3ae0def4216f161" \
+    && git submodule update --init --recursive --depth=1 \
+    && test "$(git -C td rev-parse HEAD)" = "a9966eb3704a3351568c28013fed67d797c17828"
+
+RUN cmake -S . -B build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/opt/telegram-bot-api \
+    && cmake --build build --target install --parallel 2 \
+    && /opt/telegram-bot-api/bin/telegram-bot-api --version
+
+FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 AS runtime
+
+RUN apk add --no-cache \
+      ca-certificates=20261020-r0 \
+      libcrypto3=3.5.9-r0 \
+      libgcc=14.2.0-r6 \
+      libssl3=3.5.9-r0 \
+      libstdc++=14.2.0-r6 \
+      musl=1.2.5-r13 \
+      zlib=1.3.2-r1 \
+    && addgroup -g 10001 -S telegram-bot-api \
+    && adduser -S -D -H -u 10001 -G telegram-bot-api telegram-bot-api \
+    && install -d -o 10001 -g 10001 -m 0750 \
+      /var/lib/telegram-bot-api /var/lib/telegram-bot-api/temp
+
+COPY --from=builder /opt/telegram-bot-api/bin/telegram-bot-api /usr/local/bin/telegram-bot-api
+COPY --from=builder /src/telegram-bot-api/LICENSE_1_0.txt /usr/share/licenses/telegram-bot-api/LICENSE_1_0.txt
+
+LABEL org.opencontainers.image.source="https://github.com/tdlib/telegram-bot-api" \
+      org.opencontainers.image.revision="adfd7f6a8e990272851777eeb3ae0def4216f161" \
+      org.opencontainers.image.version="10.2" \
+      org.opencontainers.image.licenses="BSL-1.0"
+
+WORKDIR /var/lib/telegram-bot-api
+USER 10001:10001
+ENTRYPOINT ["/usr/local/bin/telegram-bot-api"]
+CMD ["--local", "--http-port=8081", "--dir=/var/lib/telegram-bot-api", "--temp-dir=/var/lib/telegram-bot-api/temp"]

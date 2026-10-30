@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+!.env.example
+RESEARCH.md
+coverage
+coverage-*
+node_modules
+.deno
+.local
+volumes
+downloads
+tmp
+temp
+*.log
+*.part
+*.ytdl

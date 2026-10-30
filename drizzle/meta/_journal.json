@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1786575651523,
+      "tag": "0000_existing_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786647597326,
+      "tag": "0001_magical_iceman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786650129842,
+      "tag": "0002_lumpy_ozymandias",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786653989403,
+      "tag": "0003_silky_aaron_stack",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786658734814,
+      "tag": "0004_woozy_callisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786663914728,
+      "tag": "0005_complex_doorman",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788349968705,
+      "tag": "0006_equal_whirlwind",
+      "breakpoints": true
+    }
+  ]
+}

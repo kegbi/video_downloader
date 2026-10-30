@@ -1,0 +1,62 @@
+services:
+  telegram-bot-api:
+    profiles: ["telegram-local"]
+    build:
+      context: .
+      dockerfile: Dockerfile.telegram-bot-api
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: "10001:10001"
+    command:
+      - --local
+      - --http-port=8081
+      - --dir=/var/lib/telegram-bot-api
+      - --temp-dir=/var/lib/telegram-bot-api/temp
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:?TELEGRAM_API_ID must be set for the telegram-local profile}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:?TELEGRAM_API_HASH must be set for the telegram-local profile}
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    tmpfs:
+      - /tmp:size=16m,uid=10001,gid=10001,mode=0700
+    networks:
+      - telegram-bot-api
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_signal: SIGTERM
+    stop_grace_period: 1m
+    healthcheck:
+      test: ["CMD", "nc", "-z", "-w", "2", "127.0.0.1", "8081"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1G, pids: 256 }
+
+  telegram-bridge:
+    profiles: ["telegram-local"]
+    environment:
+      TELEGRAM_BOT_API_ROOT: http://telegram-bot-api:8081
+    depends_on:
+      telegram-bot-api:
+        condition: service_healthy
+    networks:
+      - internal
+      - telegram-bot-api
+
+networks:
+  telegram-bot-api:
+    driver: bridge
+
+volumes:
+  telegram-bot-api-data:

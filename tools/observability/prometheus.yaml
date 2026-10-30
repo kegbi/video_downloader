@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 15s
+
+storage:
+  tsdb:
+    retention:
+      time: 7d
+
+scrape_configs:
+  - job_name: video-downloader
+    static_configs:
+      - targets:
+          - api:8080
+          - worker:8081
+          - maintenance:8083
+          - telegram-bridge:8082

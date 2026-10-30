@@ -1,0 +1,9 @@
+# syntax=docker/dockerfile:1.9
+
+# Dokploy performs a fresh Git clone for each deployment. Bake the reviewed configurations into
+# immutable images instead of bind-mounting files from that disposable checkout.
+FROM grafana/loki:3.7.6 AS loki
+COPY --chown=10001:10001 tools/observability/loki-config.yaml /etc/loki/video-downloader.yaml
+
+FROM prom/prometheus:v3.13.2 AS prometheus
+COPY --chown=65534:65534 tools/observability/prometheus.yaml /etc/prometheus/video-downloader.yaml

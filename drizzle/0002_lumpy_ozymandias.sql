@@ -1,0 +1,2 @@
+CREATE INDEX "audit_events_created_at_idx" ON "audit_events" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "outbox_history_idx" ON "outbox" USING btree ("created_at") WHERE "outbox"."published_at" IS NOT NULL;

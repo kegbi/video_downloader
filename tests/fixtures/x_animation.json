@@ -1,0 +1,17 @@
+{
+  "id": "123456789",
+  "extractor_key": "Twitter",
+  "webpage_url": "https://x.com/i/status/123456789",
+  "formats": [
+    {
+      "format_id": "http-0",
+      "ext": "mp4",
+      "video_ext": "mp4",
+      "audio_ext": "none",
+      "acodec": "none",
+      "width": 320,
+      "height": 240,
+      "tbr": 100
+    }
+  ]
+}

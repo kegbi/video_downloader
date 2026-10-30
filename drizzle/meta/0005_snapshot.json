@@ -1,0 +1,1994 @@
+{
+  "id": "f08159f2-36c6-4f0a-9b85-ef9d08a4b1d3",
+  "prevId": "6149a447-525b-4e29-944e-8589c7a45e09",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.access_decision_notifications": {
+      "name": "access_decision_notifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "access_request_id": {
+          "name": "access_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_revision": {
+          "name": "request_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lease_owner": {
+          "name": "lease_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error_code": {
+          "name": "last_error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "access_decision_notifications_claim_idx": {
+          "name": "access_decision_notifications_claim_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "available_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lease_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "access_decision_notifications_request_fkey": {
+          "name": "access_decision_notifications_request_fkey",
+          "tableFrom": "access_decision_notifications",
+          "tableTo": "access_requests",
+          "columnsFrom": [
+            "access_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "access_decision_notifications_request_revision_key": {
+          "name": "access_decision_notifications_request_revision_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "access_request_id",
+            "request_revision"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "access_decision_notifications_decision_check": {
+          "name": "access_decision_notifications_decision_check",
+          "value": "\"access_decision_notifications\".\"decision\" IN ('approved', 'denied')"
+        },
+        "access_decision_notifications_state_check": {
+          "name": "access_decision_notifications_state_check",
+          "value": "\"access_decision_notifications\".\"state\" IN ('pending', 'leased', 'sent', 'failed')"
+        },
+        "access_decision_notifications_attempts_check": {
+          "name": "access_decision_notifications_attempts_check",
+          "value": "\"access_decision_notifications\".\"attempts\" >= 0"
+        },
+        "access_decision_notifications_revision_check": {
+          "name": "access_decision_notifications_revision_check",
+          "value": "\"access_decision_notifications\".\"request_revision\" > 0"
+        },
+        "access_decision_notifications_lease_check": {
+          "name": "access_decision_notifications_lease_check",
+          "value": "(\"access_decision_notifications\".\"state\" = 'leased' AND \"access_decision_notifications\".\"lease_owner\" IS NOT NULL AND \"access_decision_notifications\".\"lease_expires_at\" IS NOT NULL) OR (\"access_decision_notifications\".\"state\" <> 'leased' AND \"access_decision_notifications\".\"lease_owner\" IS NULL AND \"access_decision_notifications\".\"lease_expires_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.access_decision_prompts": {
+      "name": "access_decision_prompts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "admin_principal_id": {
+          "name": "admin_principal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_request_id": {
+          "name": "access_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_revision": {
+          "name": "request_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "prompt_message_id": {
+          "name": "prompt_message_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "access_decision_prompts_one_pending_admin_idx": {
+          "name": "access_decision_prompts_one_pending_admin_idx",
+          "columns": [
+            {
+              "expression": "admin_principal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"access_decision_prompts\".\"state\" = 'pending'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "access_decision_prompts_expiry_idx": {
+          "name": "access_decision_prompts_expiry_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "access_decision_prompts_admin_fkey": {
+          "name": "access_decision_prompts_admin_fkey",
+          "tableFrom": "access_decision_prompts",
+          "tableTo": "principals",
+          "columnsFrom": [
+            "admin_principal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "access_decision_prompts_request_fkey": {
+          "name": "access_decision_prompts_request_fkey",
+          "tableFrom": "access_decision_prompts",
+          "tableTo": "access_requests",
+          "columnsFrom": [
+            "access_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "access_decision_prompts_action_check": {
+          "name": "access_decision_prompts_action_check",
+          "value": "\"access_decision_prompts\".\"action\" IN ('allow', 'deny')"
+        },
+        "access_decision_prompts_state_check": {
+          "name": "access_decision_prompts_state_check",
+          "value": "\"access_decision_prompts\".\"state\" IN ('pending', 'completed', 'cancelled', 'expired')"
+        },
+        "access_decision_prompts_revision_check": {
+          "name": "access_decision_prompts_revision_check",
+          "value": "\"access_decision_prompts\".\"request_revision\" > 0"
+        },
+        "access_decision_prompts_message_check": {
+          "name": "access_decision_prompts_message_check",
+          "value": "\"access_decision_prompts\".\"prompt_message_id\" IS NULL OR \"access_decision_prompts\".\"prompt_message_id\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.access_request_notifications": {
+      "name": "access_request_notifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "access_request_id": {
+          "name": "access_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admin_principal_id": {
+          "name": "admin_principal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_revision": {
+          "name": "request_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lease_owner": {
+          "name": "lease_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error_code": {
+          "name": "last_error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "access_request_notifications_claim_idx": {
+          "name": "access_request_notifications_claim_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "available_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lease_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "access_request_notifications_retention_idx": {
+          "name": "access_request_notifications_retention_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "access_request_notifications_request_fkey": {
+          "name": "access_request_notifications_request_fkey",
+          "tableFrom": "access_request_notifications",
+          "tableTo": "access_requests",
+          "columnsFrom": [
+            "access_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "access_request_notifications_admin_fkey": {
+          "name": "access_request_notifications_admin_fkey",
+          "tableFrom": "access_request_notifications",
+          "tableTo": "principals",
+          "columnsFrom": [
+            "admin_principal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "access_request_notifications_request_admin_key": {
+          "name": "access_request_notifications_request_admin_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "access_request_id",
+            "admin_principal_id",
+            "request_revision"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "access_request_notifications_state_check": {
+          "name": "access_request_notifications_state_check",
+          "value": "\"access_request_notifications\".\"state\" IN ('pending', 'leased', 'sent', 'skipped', 'failed')"
+        },
+        "access_request_notifications_attempts_check": {
+          "name": "access_request_notifications_attempts_check",
+          "value": "\"access_request_notifications\".\"attempts\" >= 0"
+        },
+        "access_request_notifications_request_revision_check": {
+          "name": "access_request_notifications_request_revision_check",
+          "value": "\"access_request_notifications\".\"request_revision\" > 0"
+        },
+        "access_request_notifications_lease_check": {
+          "name": "access_request_notifications_lease_check",
+          "value": "(\"access_request_notifications\".\"state\" = 'leased' AND \"access_request_notifications\".\"lease_owner\" IS NOT NULL AND \"access_request_notifications\".\"lease_expires_at\" IS NOT NULL) OR (\"access_request_notifications\".\"state\" <> 'leased' AND \"access_request_notifications\".\"lease_owner\" IS NULL AND \"access_request_notifications\".\"lease_expires_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.access_requests": {
+      "name": "access_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bridge": {
+          "name": "bridge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_user_id": {
+          "name": "external_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_count": {
+          "name": "request_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "last_request_key": {
+          "name": "last_request_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notification_revision": {
+          "name": "notification_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "notification_pending": {
+          "name": "notification_pending",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "first_requested_at": {
+          "name": "first_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_requested_at": {
+          "name": "last_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_by": {
+          "name": "resolved_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decision_note": {
+          "name": "decision_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "access_requests_pending_idx": {
+          "name": "access_requests_pending_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "notification_pending",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "last_requested_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "access_requests_retention_idx": {
+          "name": "access_requests_retention_idx",
+          "columns": [
+            {
+              "expression": "resolved_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "last_requested_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "access_requests_resolved_by_fkey": {
+          "name": "access_requests_resolved_by_fkey",
+          "tableFrom": "access_requests",
+          "tableTo": "principals",
+          "columnsFrom": [
+            "resolved_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "access_requests_bridge_external_user_id_key": {
+          "name": "access_requests_bridge_external_user_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "bridge",
+            "external_user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "access_requests_bridge_check": {
+          "name": "access_requests_bridge_check",
+          "value": "\"access_requests\".\"bridge\" = 'telegram'"
+        },
+        "access_requests_external_user_id_check": {
+          "name": "access_requests_external_user_id_check",
+          "value": "(\"access_requests\".\"external_user_id\" ~ '^[1-9][0-9]{0,14}$' OR (\"access_requests\".\"external_user_id\" ~ '^[1-9][0-9]{15}$' AND \"access_requests\".\"external_user_id\" <= '9007199254740991'))"
+        },
+        "access_requests_state_check": {
+          "name": "access_requests_state_check",
+          "value": "\"access_requests\".\"state\" IN ('pending', 'approved', 'denied')"
+        },
+        "access_requests_request_count_check": {
+          "name": "access_requests_request_count_check",
+          "value": "\"access_requests\".\"request_count\" > 0"
+        },
+        "access_requests_notification_revision_check": {
+          "name": "access_requests_notification_revision_check",
+          "value": "\"access_requests\".\"notification_revision\" > 0"
+        },
+        "access_requests_last_request_key_check": {
+          "name": "access_requests_last_request_key_check",
+          "value": "length(\"access_requests\".\"last_request_key\") BETWEEN 1 AND 200"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.artifacts": {
+      "name": "artifacts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "temporary_object_key": {
+          "name": "temporary_object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byte_size": {
+          "name": "byte_size",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "container": {
+          "name": "container",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "video_codec": {
+          "name": "video_codec",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "audio_codec": {
+          "name": "audio_codec",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration_seconds": {
+          "name": "duration_seconds",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delete_attempts": {
+          "name": "delete_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_delete_error": {
+          "name": "last_delete_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ready_at": {
+          "name": "ready_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleting_at": {
+          "name": "deleting_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "artifacts_ready_content_key": {
+          "name": "artifacts_ready_content_key",
+          "columns": [
+            {
+              "expression": "sha256",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "byte_size",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"artifacts\".\"state\" = 'ready'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artifacts_cleanup_idx": {
+          "name": "artifacts_cleanup_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "artifacts_job_id_fkey": {
+          "name": "artifacts_job_id_fkey",
+          "tableFrom": "artifacts",
+          "tableTo": "jobs",
+          "columnsFrom": [
+            "job_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "artifacts_job_id_key": {
+          "name": "artifacts_job_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "job_id"
+          ]
+        },
+        "artifacts_object_key_key": {
+          "name": "artifacts_object_key_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "object_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "artifacts_state_check": {
+          "name": "artifacts_state_check",
+          "value": "\"artifacts\".\"state\" IN ('uploading', 'ready', 'deleting', 'deleted', 'delete_failed')"
+        },
+        "artifacts_byte_size_check": {
+          "name": "artifacts_byte_size_check",
+          "value": "\"artifacts\".\"byte_size\" >= 0"
+        },
+        "artifacts_sha256_check": {
+          "name": "artifacts_sha256_check",
+          "value": "\"artifacts\".\"sha256\" IS NULL OR \"artifacts\".\"sha256\" ~ '^[0-9a-f]{64}$'"
+        },
+        "artifacts_duration_seconds_check": {
+          "name": "artifacts_duration_seconds_check",
+          "value": "\"artifacts\".\"duration_seconds\" > 0"
+        },
+        "artifacts_width_check": {
+          "name": "artifacts_width_check",
+          "value": "\"artifacts\".\"width\" > 0"
+        },
+        "artifacts_height_check": {
+          "name": "artifacts_height_check",
+          "value": "\"artifacts\".\"height\" > 0"
+        },
+        "artifacts_delete_attempts_check": {
+          "name": "artifacts_delete_attempts_check",
+          "value": "\"artifacts\".\"delete_attempts\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.audit_events": {
+      "name": "audit_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "actor_principal_id": {
+          "name": "actor_principal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_bridge": {
+          "name": "actor_bridge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_external_id": {
+          "name": "actor_external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "changes": {
+          "name": "changes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "audit_events_target_idx": {
+          "name": "audit_events_target_idx",
+          "columns": [
+            {
+              "expression": "target_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_events_created_at_idx": {
+          "name": "audit_events_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_events_actor_principal_id_fkey": {
+          "name": "audit_events_actor_principal_id_fkey",
+          "tableFrom": "audit_events",
+          "tableTo": "principals",
+          "columnsFrom": [
+            "actor_principal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_events_result_check": {
+          "name": "audit_events_result_check",
+          "value": "\"audit_events\".\"result\" IN ('success', 'failure')"
+        },
+        "audit_events_changes_check": {
+          "name": "audit_events_changes_check",
+          "value": "jsonb_typeof(\"audit_events\".\"changes\") = 'object'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.deliveries": {
+      "name": "deliveries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "artifact_id": {
+          "name": "artifact_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bridge": {
+          "name": "bridge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination": {
+          "name": "destination",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "lease_owner": {
+          "name": "lease_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "heartbeat_at": {
+          "name": "heartbeat_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "operation_context": {
+          "name": "operation_context",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result": {
+          "name": "result",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error_code": {
+          "name": "last_error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_safe_error": {
+          "name": "last_safe_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "deliveries_claim_idx": {
+          "name": "deliveries_claim_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_attempt_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lease_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "deliveries_job_id_fkey": {
+          "name": "deliveries_job_id_fkey",
+          "tableFrom": "deliveries",
+          "tableTo": "jobs",
+          "columnsFrom": [
+            "job_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "deliveries_artifact_id_fkey": {
+          "name": "deliveries_artifact_id_fkey",
+          "tableFrom": "deliveries",
+          "tableTo": "artifacts",
+          "columnsFrom": [
+            "artifact_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "deliveries_job_id_bridge_key": {
+          "name": "deliveries_job_id_bridge_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "job_id",
+            "bridge"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "deliveries_bridge_check": {
+          "name": "deliveries_bridge_check",
+          "value": "\"deliveries\".\"bridge\" = 'telegram'"
+        },
+        "deliveries_destination_check": {
+          "name": "deliveries_destination_check",
+          "value": "jsonb_typeof(\"deliveries\".\"destination\") = 'object'"
+        },
+        "deliveries_state_check": {
+          "name": "deliveries_state_check",
+          "value": "\"deliveries\".\"state\" IN (\n        'pending', 'leased', 'delivering', 'delivered', 'retry_wait', 'failed'\n      )"
+        },
+        "deliveries_attempts_check": {
+          "name": "deliveries_attempts_check",
+          "value": "\"deliveries\".\"attempts\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.jobs": {
+      "name": "jobs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "display_id": {
+          "name": "display_id",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bridge": {
+          "name": "bridge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requester_principal_id": {
+          "name": "requester_principal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submitted_url": {
+          "name": "submitted_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_url": {
+          "name": "normalized_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_type": {
+          "name": "source_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "progress_phase": {
+          "name": "progress_phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "progress_percent": {
+          "name": "progress_percent",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "lease_owner": {
+          "name": "lease_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "heartbeat_at": {
+          "name": "heartbeat_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancellation_requested_at": {
+          "name": "cancellation_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "policy": {
+          "name": "policy",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selected_format": {
+          "name": "selected_format",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "media_metadata": {
+          "name": "media_metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "artifact_id": {
+          "name": "artifact_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "safe_error_message": {
+          "name": "safe_error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ready_at": {
+          "name": "ready_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivered_at": {
+          "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failed_at": {
+          "name": "failed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expired_at": {
+          "name": "expired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "jobs_state_lease_idx": {
+          "name": "jobs_state_lease_idx",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lease_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "jobs_requester_state_idx": {
+          "name": "jobs_requester_state_idx",
+          "columns": [
+            {
+              "expression": "requester_principal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "jobs_artifact_id_artifacts_id_fk": {
+          "name": "jobs_artifact_id_artifacts_id_fk",
+          "tableFrom": "jobs",
+          "tableTo": "artifacts",
+          "columnsFrom": [
+            "artifact_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jobs_requester_principal_id_fkey": {
+          "name": "jobs_requester_principal_id_fkey",
+          "tableFrom": "jobs",
+          "tableTo": "principals",
+          "columnsFrom": [
+            "requester_principal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "jobs_display_id_key": {
+          "name": "jobs_display_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "display_id"
+          ]
+        },
+        "jobs_bridge_idempotency_key_key": {
+          "name": "jobs_bridge_idempotency_key_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "bridge",
+            "idempotency_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "jobs_bridge_check": {
+          "name": "jobs_bridge_check",
+          "value": "\"jobs\".\"bridge\" = 'telegram'"
+        },
+        "jobs_idempotency_key_check": {
+          "name": "jobs_idempotency_key_check",
+          "value": "length(\"jobs\".\"idempotency_key\") BETWEEN 1 AND 200"
+        },
+        "jobs_source_type_check": {
+          "name": "jobs_source_type_check",
+          "value": "\"jobs\".\"source_type\" = 'x'"
+        },
+        "jobs_source_id_check": {
+          "name": "jobs_source_id_check",
+          "value": "\"jobs\".\"source_id\" ~ '^[0-9]+$'"
+        },
+        "jobs_state_check": {
+          "name": "jobs_state_check",
+          "value": "\"jobs\".\"state\" IN (\n        'queued', 'downloading', 'processing', 'ready', 'delivering',\n        'delivered', 'failed', 'cancelled', 'expired'\n      )"
+        },
+        "jobs_progress_percent_check": {
+          "name": "jobs_progress_percent_check",
+          "value": "\"jobs\".\"progress_percent\" BETWEEN 0 AND 100"
+        },
+        "jobs_attempts_check": {
+          "name": "jobs_attempts_check",
+          "value": "\"jobs\".\"attempts\" >= 0"
+        },
+        "jobs_policy_check": {
+          "name": "jobs_policy_check",
+          "value": "jsonb_typeof(\"jobs\".\"policy\") = 'object'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.outbox": {
+      "name": "outbox",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aggregate_id": {
+          "name": "aggregate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locked_by": {
+          "name": "locked_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deduplication_key": {
+          "name": "deduplication_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "outbox_publish_idx": {
+          "name": "outbox_publish_idx",
+          "columns": [
+            {
+              "expression": "published_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "available_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "outbox_history_idx": {
+          "name": "outbox_history_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"outbox\".\"published_at\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "outbox_deduplication_key_unique": {
+          "name": "outbox_deduplication_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "deduplication_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "outbox_payload_check": {
+          "name": "outbox_payload_check",
+          "value": "jsonb_typeof(\"outbox\".\"payload\") = 'object'"
+        },
+        "outbox_attempts_check": {
+          "name": "outbox_attempts_check",
+          "value": "\"outbox\".\"attempts\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.principals": {
+      "name": "principals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bridge": {
+          "name": "bridge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_user_id": {
+          "name": "external_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "principals_authorization_idx": {
+          "name": "principals_authorization_idx",
+          "columns": [
+            {
+              "expression": "bridge",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "principals_created_by_fkey": {
+          "name": "principals_created_by_fkey",
+          "tableFrom": "principals",
+          "tableTo": "principals",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "principals_updated_by_fkey": {
+          "name": "principals_updated_by_fkey",
+          "tableFrom": "principals",
+          "tableTo": "principals",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "principals_bridge_external_user_id_key": {
+          "name": "principals_bridge_external_user_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "bridge",
+            "external_user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "principals_bridge_check": {
+          "name": "principals_bridge_check",
+          "value": "\"principals\".\"bridge\" = 'telegram'"
+        },
+        "principals_external_user_id_check": {
+          "name": "principals_external_user_id_check",
+          "value": "(\"principals\".\"external_user_id\" ~ '^[1-9][0-9]{0,14}$' OR (\"principals\".\"external_user_id\" ~ '^[1-9][0-9]{15}$' AND \"principals\".\"external_user_id\" <= '9007199254740991'))"
+        },
+        "principals_role_check": {
+          "name": "principals_role_check",
+          "value": "\"principals\".\"role\" IN ('admin', 'user')"
+        },
+        "principals_state_check": {
+          "name": "principals_state_check",
+          "value": "\"principals\".\"state\" IN ('active', 'disabled')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.schema_migrations": {
+      "name": "schema_migrations",
+      "schema": "",
+      "columns": {
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "applied_at": {
+          "name": "applied_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

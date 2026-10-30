@@ -1,0 +1,3 @@
+-- Baseline only. Migrations 0001_initial.sql through 0003_drizzle_constraint_names.sql
+-- created this schema before Drizzle Kit was introduced. The accompanying snapshot is the
+-- starting point for future generated migrations; this file must never recreate existing tables.

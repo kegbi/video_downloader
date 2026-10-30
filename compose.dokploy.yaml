@@ -1,0 +1,522 @@
+name: video-downloader
+
+# Dokploy clones the repository before rendering this standalone definition. Build
+# contexts and Dockerfile paths are therefore repository-root-relative; runtime state uses only
+# named volumes. This stack intentionally has no host ports, domains, Traefik labels, or attachment
+# to dokploy-network.
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "2"
+
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: app
+  init: true
+  restart: unless-stopped
+  read_only: true
+  user: "10001:10001"
+  tmpfs:
+    - /tmp:size=16m,uid=10001,gid=10001,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  stop_signal: SIGTERM
+  stop_grace_period: 1m
+  logging: *default-logging
+  networks:
+    - backend
+    - observability
+
+x-worker-build: &worker-build
+  context: .
+  dockerfile: Dockerfile
+  target: worker
+
+x-base-environment: &base-environment
+  APP_ENV: production
+  APP_LOG_LEVEL: ${APP_LOG_LEVEL:-info}
+  TZ: ${APP_TIMEZONE:-UTC}
+  METRICS_ENABLED: "${METRICS_ENABLED:-true}"
+  METRICS_PATH: ${METRICS_PATH:-/metrics}
+  LOKI_PUSH_URL: http://loki:3100/loki/api/v1/push
+  TELEGRAM_ACCESS_NOTIFICATION_LEASE_SECONDS: ${TELEGRAM_ACCESS_NOTIFICATION_LEASE_SECONDS:-30}
+  TELEGRAM_ACCESS_NOTIFICATION_POLL_INTERVAL_MS: ${TELEGRAM_ACCESS_NOTIFICATION_POLL_INTERVAL_MS:-1000}
+  TELEGRAM_ACCESS_NOTIFICATION_MAX_ATTEMPTS: ${TELEGRAM_ACCESS_NOTIFICATION_MAX_ATTEMPTS:-8}
+  TELEGRAM_ADMIN_PROMPT_TTL_SECONDS: ${TELEGRAM_ADMIN_PROMPT_TTL_SECONDS:-300}
+  ACCESS_REQUEST_DENIED_COOLDOWN_SECONDS: ${ACCESS_REQUEST_DENIED_COOLDOWN_SECONDS:-604800}
+
+x-database-environment: &database-environment
+  POSTGRES_HOST: postgres
+  POSTGRES_DB: ${POSTGRES_DB:-video_downloader}
+  POSTGRES_USER: ${POSTGRES_USER:-video_downloader}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in Dokploy}
+  POSTGRES_POOL_SIZE: "${POSTGRES_POOL_SIZE:-10}"
+  POSTGRES_SSL_MODE: disable
+
+x-rabbit-environment: &rabbit-environment
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_USER: ${RABBITMQ_USER:-video_downloader}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in Dokploy}
+  RABBITMQ_VHOST: ${RABBITMQ_VHOST:-video_downloader}
+  RABBITMQ_TLS: "false"
+  RABBITMQ_DOWNLOAD_QUEUE: ${RABBITMQ_DOWNLOAD_QUEUE:-video.download}
+  RABBITMQ_DOWNLOAD_RETRY_QUEUE: ${RABBITMQ_DOWNLOAD_RETRY_QUEUE:-video.download.retry}
+  RABBITMQ_DOWNLOAD_DEAD_LETTER_QUEUE: ${RABBITMQ_DOWNLOAD_DEAD_LETTER_QUEUE:-video.download.dead}
+
+x-storage-environment: &storage-environment
+  S3_ENDPOINT: http://rustfs:9000
+  S3_BUCKET: ${S3_BUCKET:-video-artifacts}
+  S3_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?set RUSTFS_ACCESS_KEY in Dokploy}
+  S3_SECRET_KEY: ${RUSTFS_SECRET_KEY:?set RUSTFS_SECRET_KEY in Dokploy}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_FORCE_PATH_STYLE: "true"
+  S3_TEMP_PREFIX: ${S3_TEMP_PREFIX:-temporary/}
+  S3_ARTIFACT_PREFIX: ${S3_ARTIFACT_PREFIX:-artifacts/}
+
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    read_only: true
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-video_downloader}
+      POSTGRES_USER: ${POSTGRES_USER:-video_downloader}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in Dokploy}
+    shm_size: 128m
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /var/run/postgresql:size=16m,uid=70,gid=70,mode=3775
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    stop_signal: SIGTERM
+    stop_grace_period: 1m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 1G, pids: 256 }
+
+  rabbitmq:
+    image: rabbitmq:4.3.1-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-video_downloader}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in Dokploy}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-video_downloader}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit disk_free_limit 4294967296"
+      RABBITMQ_CTL_ERL_ARGS: "+S 1:1"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    expose:
+      - "5672"
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    stop_signal: SIGTERM
+    stop_grace_period: 1m
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "ping"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 768M, pids: 256 }
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-beta.10
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?set RUSTFS_ACCESS_KEY in Dokploy}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?set RUSTFS_SECRET_KEY in Dokploy}
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_VOLUMES: /data
+    tmpfs:
+      - /tmp:size=16m,uid=10001,gid=10001,mode=0700
+      - /logs:size=64m,uid=10001,gid=10001,mode=0700
+    volumes:
+      - rustfs-data:/data
+    expose:
+      - "9000"
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_signal: SIGTERM
+    stop_grace_period: 1m
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 1G, pids: 256 }
+
+  loki:
+    build:
+      context: .
+      dockerfile: Dockerfile.observability
+      target: loki
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+    command: ["-config.file=/etc/loki/video-downloader.yaml"]
+    tmpfs:
+      - /tmp:size=16m,uid=10001,gid=10001,mode=0700
+    volumes:
+      - loki-data:/loki
+    expose:
+      - "3100"
+    networks:
+      - observability
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "/usr/bin/loki", "-version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 512M, pids: 128 }
+
+  prometheus:
+    build:
+      context: .
+      dockerfile: Dockerfile.observability
+      target: prometheus
+    restart: unless-stopped
+    read_only: true
+    user: "65534:65534"
+    command:
+      - "--config.file=/etc/prometheus/video-downloader.yaml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--storage.tsdb.retention.size=5GB"
+    tmpfs:
+      - /tmp:size=16m,uid=65534,gid=65534,mode=0700
+    volumes:
+      - prometheus-data:/prometheus
+    expose:
+      - "9090"
+    networks:
+      - observability
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 384M, pids: 128 }
+
+  rustfs-init:
+    <<: *app-common
+    restart: "no"
+    command: ["deno", "task", "storage:init"]
+    environment:
+      <<: [*base-environment, *storage-environment]
+    networks:
+      - backend
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 128M, pids: 128 }
+
+  migrate:
+    <<: *app-common
+    restart: "no"
+    command: ["deno", "task", "migrate"]
+    environment:
+      <<: [*base-environment, *database-environment]
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 128M, pids: 128 }
+
+  api:
+    <<: *app-common
+    command: ["deno", "task", "api"]
+    environment:
+      <<: [*base-environment, *database-environment, *storage-environment]
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN in Dokploy}
+      API_HOST: 0.0.0.0
+      TELEGRAM_ADMIN_USER_IDS: ${TELEGRAM_ADMIN_USER_IDS:?set TELEGRAM_ADMIN_USER_IDS in Dokploy}
+      RETENTION_DEFAULT_MODE: ${RETENTION_DEFAULT_MODE:-ttl}
+      RETENTION_TTL_SECONDS: "${RETENTION_TTL_SECONDS:-604800}"
+      RETENTION_AFTER_DELIVERY_GRACE_SECONDS: "${RETENTION_AFTER_DELIVERY_GRACE_SECONDS:-300}"
+      ACCESS_REQUEST_TTL_SECONDS: "${ACCESS_REQUEST_TTL_SECONDS:-604800}"
+      MAX_ACTIVE_JOBS_PER_USER: "${MAX_ACTIVE_JOBS_PER_USER:-2}"
+      MAX_QUEUED_JOBS: "${MAX_QUEUED_JOBS:-100}"
+      SOURCE_ALLOWED_HOSTS: ${SOURCE_ALLOWED_HOSTS:-x.com,www.x.com,twitter.com,www.twitter.com}
+    expose:
+      - "8080"
+    networks:
+      - backend
+      - observability
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rustfs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - deno
+        - eval
+        - "const r=await fetch('http://127.0.0.1:8080/health/ready');if(!r.ok)Deno.exit(1)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M, pids: 128 }
+
+  worker:
+    <<: *app-common
+    build: *worker-build
+    command: ["deno", "task", "worker"]
+    environment:
+      <<: [*base-environment, *database-environment, *rabbit-environment, *storage-environment]
+      DOWNLOAD_TEMP_DIR: /var/tmp/video-downloader
+      STORAGE_MAX_BYTES: ${STORAGE_MAX_BYTES:-100000000000}
+      WORKER_CONCURRENCY: "${WORKER_CONCURRENCY:-2}"
+      WORKER_JOB_LEASE_SECONDS: "${WORKER_JOB_LEASE_SECONDS:-120}"
+      WORKER_HEARTBEAT_SECONDS: "${WORKER_HEARTBEAT_SECONDS:-30}"
+      WORKER_MAX_ATTEMPTS: "${WORKER_MAX_ATTEMPTS:-3}"
+      WORKER_SOURCE_TIMEOUT_RETRY_DELAY_SECONDS: "${WORKER_SOURCE_TIMEOUT_RETRY_DELAY_SECONDS:-5}"
+      WORKER_RETRY_DELAY_SECONDS: "${WORKER_RETRY_DELAY_SECONDS:-30}"
+      YTDLP_PATH: yt-dlp
+      FFMPEG_PATH: ffmpeg
+      FFPROBE_PATH: ffprobe
+      DOWNLOAD_TIMEOUT_SECONDS: "${DOWNLOAD_TIMEOUT_SECONDS:-900}"
+      DOWNLOAD_MAX_DURATION_SECONDS: "${DOWNLOAD_MAX_DURATION_SECONDS:-1800}"
+      DOWNLOAD_MAX_HEIGHT: "${DOWNLOAD_MAX_HEIGHT:-1080}"
+      DOWNLOAD_FORMAT_SAFETY_BYTES: "${DOWNLOAD_FORMAT_SAFETY_BYTES:-2000000}"
+      MAX_ARTIFACT_BYTES: "${MAX_ARTIFACT_BYTES:-1990000000}"
+      DOWNLOAD_MAX_TEMP_BYTES: "${DOWNLOAD_MAX_TEMP_BYTES:-3982000000}"
+      TELEGRAM_MAX_UPLOAD_BYTES: "${TELEGRAM_MAX_UPLOAD_BYTES:-1990000000}"
+      DOWNLOADER_MODE: live
+    volumes:
+      - worker-temp:/var/tmp/video-downloader
+    networks:
+      - backend
+      - observability
+      - worker-egress
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      rustfs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - deno
+        - eval
+        - "const r=await fetch('http://127.0.0.1:8081/health/ready');if(!r.ok)Deno.exit(1)"
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 2m
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 1G, pids: 256 }
+
+  maintenance:
+    <<: *app-common
+    command: ["deno", "task", "maintenance"]
+    environment:
+      <<: [*base-environment, *database-environment, *rabbit-environment, *storage-environment]
+      OUTBOX_POLL_INTERVAL_MS: "${OUTBOX_POLL_INTERVAL_MS:-250}"
+      CLEANUP_INTERVAL_SECONDS: "${CLEANUP_INTERVAL_SECONDS:-60}"
+      TEMP_OBJECT_MAX_AGE_SECONDS: "${TEMP_OBJECT_MAX_AGE_SECONDS:-86400}"
+      JOB_HISTORY_TTL_SECONDS: "${JOB_HISTORY_TTL_SECONDS:-604800}"
+      ACCESS_REQUEST_TTL_SECONDS: "${ACCESS_REQUEST_TTL_SECONDS:-604800}"
+    expose:
+      - "8083"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      rustfs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - deno
+        - eval
+        - "const r=await fetch('http://127.0.0.1:8083/health/ready');if(!r.ok)Deno.exit(1)"
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 192M, pids: 128 }
+
+  telegram-bot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.telegram-bot-api
+    init: true
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+    command:
+      - --local
+      - --http-port=8081
+      - --dir=/var/lib/telegram-bot-api
+      - --temp-dir=/var/lib/telegram-bot-api/temp
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:?set TELEGRAM_API_ID in Dokploy}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:?set TELEGRAM_API_HASH in Dokploy}
+    tmpfs:
+      - /tmp:size=16m,uid=10001,gid=10001,mode=0700
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    expose:
+      - "8081"
+    networks:
+      - telegram-egress
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_signal: SIGTERM
+    stop_grace_period: 1m
+    healthcheck:
+      test: ["CMD", "nc", "-z", "-w", "2", "127.0.0.1", "8081"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1G, pids: 256 }
+
+  telegram-bridge:
+    <<: *app-common
+    command: ["deno", "task", "telegram"]
+    environment:
+      <<: *base-environment
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN in Dokploy}
+      API_BASE_URL: http://api:8080
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in Dokploy}
+      TELEGRAM_ADMIN_USER_IDS: ${TELEGRAM_ADMIN_USER_IDS:?set TELEGRAM_ADMIN_USER_IDS in Dokploy}
+      TELEGRAM_MODE: polling
+      TELEGRAM_BOT_API_ROOT: http://telegram-bot-api:8081
+      TELEGRAM_MAX_UPLOAD_BYTES: "${TELEGRAM_MAX_UPLOAD_BYTES:-1990000000}"
+      TELEGRAM_PROGRESS_MIN_INTERVAL_SECONDS: "${TELEGRAM_PROGRESS_MIN_INTERVAL_SECONDS:-2}"
+      TELEGRAM_DELIVERY_LEASE_SECONDS: "${TELEGRAM_DELIVERY_LEASE_SECONDS:-300}"
+      TELEGRAM_DELIVERY_HEARTBEAT_SECONDS: "${TELEGRAM_DELIVERY_HEARTBEAT_SECONDS:-30}"
+      # Production latency budget: keep this literal so a stale Dokploy environment
+      # value cannot silently restore the former one-second delivery poll.
+      TELEGRAM_DELIVERY_POLL_INTERVAL_MS: "250"
+      ALLOW_PRIVATE_CHATS_ONLY: "true"
+      SOURCE_ALLOWED_HOSTS: ${SOURCE_ALLOWED_HOSTS:-x.com,www.x.com,twitter.com,www.twitter.com}
+    expose:
+      - "8082"
+    networks:
+      - backend
+      - observability
+      - telegram-egress
+    depends_on:
+      api:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+      maintenance:
+        condition: service_healthy
+      telegram-bot-api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - deno
+        - eval
+        - "const r=await fetch('http://127.0.0.1:8082/health/ready');if(!r.ok)Deno.exit(1)"
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 2m
+    deploy:
+      # Keep this at zero for the first deployment. Move the bot to the local Bot API server (if it
+      # used the hosted API) before changing it to one; never run both polling paths concurrently.
+      replicas: ${TELEGRAM_BRIDGE_REPLICAS:-0}
+      resources:
+        limits: { cpus: "0.25", memory: 256M, pids: 128 }
+
+networks:
+  backend:
+    driver: bridge
+    internal: true
+  observability:
+    driver: bridge
+    internal: true
+  worker-egress:
+    driver: bridge
+  telegram-egress:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  rustfs-data:
+  telegram-bot-api-data:
+  worker-temp:
+  loki-data:
+  prometheus-data:

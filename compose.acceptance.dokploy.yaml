@@ -1,0 +1,64 @@
+name: video-downloader-large-file-acceptance
+
+# This definition is intentionally separate from production. Create it as a temporary Git-backed
+# Dokploy Compose service only for a controlled live run, then delete its exact container and
+# scratch volume. It joins only the already-existing production Telegram egress network.
+
+services:
+  large-file-acceptance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    init: true
+    restart: "no"
+    read_only: true
+    user: "10001:10001"
+    tmpfs:
+      - /tmp:size=16m,uid=10001,gid=10001,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    command:
+      - deno
+      - run
+      - --no-prompt
+      - --cached-only
+      - --allow-env=RUN_LARGE_FILE_ACCEPTANCE,LARGE_FILE_ACCEPTANCE_CHAT_ID,TELEGRAM_BOT_API_ROOT,TELEGRAM_BOT_TOKEN,TELEGRAM_MAX_UPLOAD_BYTES,MAX_ARTIFACT_BYTES,DOWNLOAD_FORMAT_SAFETY_BYTES,DOWNLOAD_MAX_TEMP_BYTES,FFMPEG_PATH,FFPROBE_PATH
+      - --allow-read=/var/tmp/video-downloader/large-file-acceptance
+      - --allow-write=/var/tmp/video-downloader/large-file-acceptance
+      - --allow-run=deno
+      - tools/run_large_file_acceptance.ts
+    environment:
+      RUN_LARGE_FILE_ACCEPTANCE: "1"
+      LARGE_FILE_ACCEPTANCE_CHAT_ID: ${TELEGRAM_ADMIN_USER_IDS:?set TELEGRAM_ADMIN_USER_IDS in Dokploy}
+      TELEGRAM_BOT_API_ROOT: http://telegram-bot-api:8081
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in Dokploy}
+      TELEGRAM_MAX_UPLOAD_BYTES: ${TELEGRAM_MAX_UPLOAD_BYTES:?set reviewed TELEGRAM_MAX_UPLOAD_BYTES in Dokploy}
+      MAX_ARTIFACT_BYTES: ${MAX_ARTIFACT_BYTES:?set reviewed MAX_ARTIFACT_BYTES in Dokploy}
+      DOWNLOAD_FORMAT_SAFETY_BYTES: ${DOWNLOAD_FORMAT_SAFETY_BYTES:?set reviewed DOWNLOAD_FORMAT_SAFETY_BYTES in Dokploy}
+      DOWNLOAD_MAX_TEMP_BYTES: ${DOWNLOAD_MAX_TEMP_BYTES:?set reviewed DOWNLOAD_MAX_TEMP_BYTES in Dokploy}
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      FFPROBE_PATH: /usr/bin/ffprobe
+    volumes:
+      - acceptance-scratch:/var/tmp/video-downloader
+    networks:
+      - production-telegram-egress
+    stop_grace_period: 2m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 1G, pids: 256 }
+
+networks:
+  production-telegram-egress:
+    external: true
+    name: ${PRODUCTION_TELEGRAM_EGRESS_NETWORK:?set the existing private production Telegram egress network in Dokploy}
+
+volumes:
+  acceptance-scratch:
