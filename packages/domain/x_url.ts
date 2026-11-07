@@ -6,7 +6,11 @@ export interface ParsedXUrl {
   readonly statusId: string;
 }
 
-const STATUS_PATH = /^\/(?:i|[A-Za-z0-9_]{1,15})\/status\/(\d{1,20})\/?$/;
+// The optional `/video/N` or `/photo/N` suffix is the media-viewer form X produces when a post is
+// shared from its media view. It names the same status, so it is accepted and dropped during
+// normalization; the job still follows the deterministic first-video selection policy.
+const STATUS_PATH =
+  /^\/(?:i|[A-Za-z0-9_]{1,15})\/status\/(\d{1,20})(?:\/(?:video|photo)\/[1-4])?\/?$/;
 
 export function parseXStatusUrl(input: string, allowedHosts: ReadonlySet<string>): ParsedXUrl {
   const submittedUrl = input.trim();

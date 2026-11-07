@@ -13,6 +13,9 @@ Deno.test("X URL parser normalizes approved status shapes without changing ident
       "https://www.twitter.com/i/status/123456789?t=123",
       "https://x.com/someone/status/123456789?a=AbCdEf123_xyz&s=19",
       "https://x.com/user/status/123456789?redirect=https://127.0.0.1",
+      "https://x.com/user/status/123456789/video/1?a=mnMG1oXjVlp1n3Gc_O0&s=19",
+      "https://x.com/user/status/123456789/video/2/",
+      "https://twitter.com/i/status/123456789/photo/1",
     ]
   ) {
     const parsed = parseXStatusUrl(input, hosts);
@@ -35,6 +38,11 @@ Deno.test("X URL parser rejects schemes, credentials, ports, fragments and gener
       "https://x.com/home?ref=https://x.com/i/status/123",
       "https://x.com/i/status/0",
       "https://x.com/user/status/123/extra",
+      "https://x.com/user/status/123/video",
+      "https://x.com/user/status/123/video/0",
+      "https://x.com/user/status/123/video/5",
+      "https://x.com/user/status/123/video/1/extra",
+      "https://x.com/user/status/123/analytics",
     ]
   ) assertThrows(() => parseXStatusUrl(input, hosts), DomainError);
 });
