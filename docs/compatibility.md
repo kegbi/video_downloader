@@ -27,7 +27,7 @@ Verified on 2026-08-30 with Deno 2.9.5 and Docker Engine 29.7.2.
 
 ## RabbitMQ
 
-- Server: `rabbitmq:4.3.1-management-alpine`.
+- Server: `rabbitmq:4.3.8-management-alpine`.
 - Client: `@cloudamqp/amqp-client` 4.0.0.
 - The low-level client passed durable quorum declaration, persistent publish with
   publisher confirmation, manual acknowledgement, and retry/dead-letter topology.
@@ -41,13 +41,13 @@ Verified on 2026-08-30 with Deno 2.9.5 and Docker Engine 29.7.2.
 
 ## RustFS
 
-- Server: `rustfs/rustfs:1.0.0-beta.10`.
+- Server: `rustfs/rustfs:1.0.7`.
 - Client: AWS SDK `@aws-sdk/client-s3` 3.1108.0 with path-style addressing.
 - The client passed bucket creation, temporary upload, server-side copy/promotion,
   HEAD verification, byte-range streaming, and idempotent deletion.
 - AWS SDK user-agent construction requires Deno's narrow `--allow-sys=osRelease`
   permission.
-- RustFS is still a beta dependency and this Compose deployment is single-node.
+- This Compose deployment runs RustFS as a single node.
   `forever` retention therefore requires an independent backup.
 
 ## Media tools

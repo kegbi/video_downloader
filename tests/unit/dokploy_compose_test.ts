@@ -164,8 +164,8 @@ Deno.test("Dokploy runtime hardening and observability configuration are deploya
   assertMatch(serviceBlock(compose, "rustfs-init"), /restart: "no"/);
   assertMatch(serviceBlock(compose, "worker"), /stop_grace_period: 2m/);
   assertMatch(serviceBlock(compose, "telegram-bridge"), /stop_grace_period: 2m/);
-  assertMatch(dockerfile, /FROM grafana\/loki:3\.7\.6 AS loki/);
-  assertMatch(dockerfile, /FROM prom\/prometheus:v3\.13\.2 AS prometheus/);
+  assertMatch(dockerfile, /FROM grafana\/loki:3\.7\.10 AS loki/);
+  assertMatch(dockerfile, /FROM prom\/prometheus:v3\.13\.5 AS prometheus/);
   assertMatch(dockerfile, /COPY --chown=10001:10001 tools\/observability\/loki-config\.yaml/);
   assertMatch(
     dockerfile,

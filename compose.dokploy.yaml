@@ -81,7 +81,7 @@ x-storage-environment: &storage-environment
 
 services:
   postgres:
-    image: postgres:17.6-alpine
+    image: postgres:17.12-alpine
     restart: unless-stopped
     read_only: true
     environment:
@@ -114,7 +114,7 @@ services:
         limits: { cpus: "0.5", memory: 1G, pids: 256 }
 
   rabbitmq:
-    image: rabbitmq:4.3.1-management-alpine
+    image: rabbitmq:4.3.8-management-alpine
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-video_downloader}
@@ -144,7 +144,7 @@ services:
         limits: { cpus: "0.5", memory: 768M, pids: 256 }
 
   rustfs:
-    image: rustfs/rustfs:1.0.0-beta.10
+    image: rustfs/rustfs:1.0.7
     restart: unless-stopped
     read_only: true
     user: "10001:10001"

@@ -20,8 +20,8 @@ approved inventory at build time.
 | `@std/path` | 1.1.4 | MIT |
 
 Container/tool components are pinned separately in `Dockerfile` and `compose.yaml`: Deno 2.9.5,
-PostgreSQL 17.6, RabbitMQ 4.3.1, RustFS 1.0.0-beta.10, Grafana Loki 3.7.6 (AGPL-3.0), Prometheus
-3.13.2 (Apache-2.0), yt-dlp 2026.06.09 (SHA-256 verified), and the Debian FFmpeg package from the
+PostgreSQL 17.12, RabbitMQ 4.3.8, RustFS 1.0.7, Grafana Loki 3.7.10 (AGPL-3.0), Prometheus
+3.13.5 (Apache-2.0), yt-dlp 2026.06.09 (SHA-256 verified), and the Debian FFmpeg package from the
 pinned Deno base image.
 
 The optional local service is built from official source rather than a third-party image:
