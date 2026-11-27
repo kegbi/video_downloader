@@ -36,8 +36,9 @@ Deno.test("Dokploy Compose is a complete private production topology", async () 
   assertServiceNetworks(compose, "rabbitmq", ["backend"]);
   assertMatch(
     serviceBlock(compose, "rabbitmq"),
-    /test: \["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "ping"\][\s\S]*interval: 30s[\s\S]*timeout: 15s/,
+    /test: \["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "check_port_listener", "5672"\][\s\S]*interval: 30s[\s\S]*timeout: 15s/,
   );
+  assertMatch(serviceBlock(compose, "rabbitmq"), /hostname: rabbitmq/);
   assertMatch(serviceBlock(compose, "rabbitmq"), /RABBITMQ_CTL_ERL_ARGS: "\+S 1:1"/);
   assertServiceNetworks(compose, "rustfs", ["backend"]);
   assertServiceNetworks(compose, "api", ["backend", "observability"]);

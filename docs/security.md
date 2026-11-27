@@ -89,7 +89,11 @@ deletion. PostgreSQL is authoritative; RabbitMQ and Telegram are at-least-once b
 
 Never commit `.env`, cookies, bot tokens, private keys, database dumps, or object-store exports. Use
 independent credentials per service/deployment and rotate the internal API token, Telegram bot
-token, database password, RabbitMQ password, and S3 keys after any suspected disclosure. Docker
+token, database password, RabbitMQ password, and S3 keys after any suspected disclosure. RabbitMQ
+reads `RABBITMQ_PASSWORD` only when its node first starts, because the fixed `rabbitmq` hostname
+keeps the node across redeploys. To rotate it, first run
+`docker exec -i <rabbitmq container> rabbitmqctl change_password video_downloader` and type the new
+password on standard input, so it never appears in argv. Then update Dokploy and redeploy. Docker
 Compose environment variables are suitable for initial self-hosting; deployments with stricter
 requirements should inject mounted secrets or use an orchestrator secret store.
 

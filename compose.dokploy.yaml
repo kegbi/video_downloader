@@ -115,6 +115,9 @@ services:
 
   rabbitmq:
     image: rabbitmq:4.3.8-management-alpine
+    # RabbitMQ keeps its state under rabbit@<hostname>. A fixed hostname keeps queues and
+    # definitions across container recreation; Docker's default random hostname starts an empty node.
+    hostname: rabbitmq
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-video_downloader}
@@ -133,7 +136,7 @@ services:
     stop_signal: SIGTERM
     stop_grace_period: 1m
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "check_port_listener", "5672"]
       interval: 30s
       timeout: 15s
       retries: 5

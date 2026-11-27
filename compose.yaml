@@ -92,7 +92,7 @@ services:
       RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-video_downloader}
       RABBITMQ_CTL_ERL_ARGS: "+S 1:1"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "check_port_listener", "5672"]
       interval: 30s
       timeout: 15s
       retries: 5
@@ -376,7 +376,7 @@ services:
     tmpfs:
       - /var/lib/rabbitmq:size=128m,uid=100,gid=101,mode=0700
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "-t", "10", "check_port_listener", "5672"]
       interval: 2s
       timeout: 15s
       retries: 40

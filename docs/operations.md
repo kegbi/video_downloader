@@ -337,11 +337,14 @@ history before restarting it:
 
 ```sh
 docker inspect --format '{{json .State.Health}}' "$(docker compose ps -q rabbitmq)"
-docker compose exec -T rabbitmq time rabbitmq-diagnostics -q -t 10 ping
+docker compose exec -T rabbitmq time rabbitmq-diagnostics -q -t 10 check_port_listener 5672
 ```
 
-The Compose healthcheck limits its CLI runtime to one Erlang scheduler, gives the minimal
-authenticated probe 10 seconds internally, and gives it 15 seconds at the Docker boundary. Repeated
+The Compose healthcheck passes only once the node has its AMQP listener on port 5672, so services
+that wait for a healthy broker can connect immediately. A bare `ping` succeeds as soon as the Erlang
+node answers, before the listener accepts connections. The healthcheck limits its CLI runtime to
+one Erlang scheduler, gives the probe 10 seconds internally, and gives it 15 seconds at the Docker
+boundary. Repeated
 `Healthcheck timed out` entries indicate scheduler or host contention; authentication or node-name
 errors instead require checking the Erlang cookie and container hostname. Preserve the probe output
 with the incident logs.
